@@ -1,6 +1,6 @@
 Name:                implicit
 Version:             0.0.5
-cabal-version:       >= 1.6
+cabal-version:       >= 1.8
 Synopsis:            Math-inspired programmatic 2&3D CAD: CSG, bevels, and shells; gcode export..
 Description:         A math-inspired programmatic CAD library in haskell.
                      Build objects with constructive solid geometry, bevels,
@@ -14,9 +14,10 @@ Homepage:            https://github.com/colah/ImplicitCAD
 build-type:          Simple
 Category:            Graphics
 
-Library
+library
 
-    Build-Depends:
+    hs-source-dirs: .
+    build-depends:
         base >= 3 && < 5,
         filepath,
         directory,
@@ -33,6 +34,7 @@ Library
         blaze-builder,
         blaze-markup,
         blaze-svg,
+        hspec,
         storable-endian,
         JuicyPixels,
         NumInstances
@@ -69,7 +71,12 @@ Library
         Graphics.Implicit.MathUtil
         Graphics.Implicit.ExtOpenScad
         Graphics.Implicit.ObjectUtil
-
+        Graphics.Implicit.Spec
+        -- TODO: this is used by extopenscad for providing $res; we
+        -- need an API to implement dynamic variables, and then scrap
+        -- that exposed module.
+        Graphics.Implicit.ExtOpenScad.Definitions
+        
     Other-Modules:
         Graphics.Implicit.ObjectUtil.GetBox2
         Graphics.Implicit.ObjectUtil.GetBox3
@@ -79,7 +86,7 @@ Library
         Graphics.Implicit.ExtOpenScad.Parser.Util
         Graphics.Implicit.ExtOpenScad.Parser.Statement
         Graphics.Implicit.ExtOpenScad.Parser.Expr
-        Graphics.Implicit.ExtOpenScad.Definitions
+        --Graphics.Implicit.ExtOpenScad.Definitions
         Graphics.Implicit.ExtOpenScad.Primitives
         Graphics.Implicit.ExtOpenScad.Eval.Statement
         Graphics.Implicit.ExtOpenScad.Eval.Expr
@@ -109,11 +116,20 @@ Library
         Graphics.Implicit.Export.Render.RefineSegs
         Graphics.Implicit.Export.Render.TesselateLoops
         Graphics.Implicit.Export.Render.HandlePolylines
+        Graphics.Implicit.Spec.Parser
+        Graphics.Implicit.Spec.Parser.Util
+        Graphics.Implicit.Spec.Parser.Expr
+        Graphics.Implicit.Spec.Parser.Statement
 
-Executable extopenscad
+executable extopenscad
 
-   Main-is: extopenscad.hs
-   ghc-options:
+    hs-source-dirs: programs
+    main-is: extopenscad.hs
+    build-depends:
+        base,
+        implicit,
+        containers, vector-space, optparse-applicative, filepath
+    ghc-options:
         -O2 -optc-O3
         -threaded
         -rtsopts
@@ -124,4 +140,8 @@ source-repository head
     type:            git
     location:        https://github.com/colah/ImplicitCAD.git
 
-
+test-suite test-implicit
+    type: exitcode-stdio-1.0
+    build-depends: base, hspec, implicit
+    main-is: Spec.hs
+    hs-source-dirs: test-suite

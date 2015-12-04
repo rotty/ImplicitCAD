@@ -1,27 +1,55 @@
 module Graphics.Implicit.ExtOpenScad.Parser.Util where
 
+import Control.Applicative ((<$>), (<*>), (<*), (*>))
+import Control.Monad (void)
 import Text.ParserCombinators.Parsec  hiding (State)
 import Graphics.Implicit.ExtOpenScad.Definitions
 
--- white space, including tabs, newlines and comments
-genSpace = many $ 
-    oneOf " \t\n\r" 
-    <|> (try $ do
-        _ <- string "//"
-        _ <- many ( noneOf "\n")
-        _ <- string "\n"
-        return ' '
-    ) <|> (try $ do
-        _ <- string "/*"
-        _ <- manyTill anyChar (try $ string "*/")
-        return ' '
-    )
+parseWithEof :: Parser a -> String -> Either ParseError a
+parseWithEof p = parse (p <* eof) ""
 
-pad parser = do
-    _ <- genSpace
-    a <- parser
-    _ <- genSpace
-    return a
+parseWithLeftOver :: Parser a -> String -> Either ParseError (a, String)
+parseWithLeftOver p = parse ((,) <$> p <*> leftOver) ""
+  where leftOver = manyTill anyToken eof
+
+
+-- white space, including tabs, newlines and comments
+whitespace :: Parser ()
+whitespace =
+  choice [simpleWhiteSpace *> whitespace
+         ,lineComment *> whitespace
+         ,blockComment *> whitespace
+         ,return ()]
+  where
+    lineComment = try (string "//")
+                  *> manyTill anyChar (void (char '\n') <|> eof)
+    blockComment = try (string "/*")
+                  *> manyTill anyChar (try (string "*/"))
+    simpleWhiteSpace = void $ many1 $ oneOf " \t\n\r" 
+
+lexeme :: Parser a -> Parser a
+lexeme p = p <* whitespace
+
+comma :: Parser Char
+comma = lexeme $ char ','
+
+charSep :: Char -> Parser ()
+charSep = void . lexeme . char
+
+symbol :: String -> Parser String
+symbol = lexeme . string
+
+parens :: Parser a -> Parser a
+parens = between (lexeme $ char '(') (lexeme $ char ')')
+
+brackets :: Parser a -> Parser a
+brackets = between (lexeme $ char '[') (lexeme $ char ']')
+
+braces :: Parser a -> Parser a
+braces = between (lexeme $ char '{') (lexeme $ char '}')
+
+angleBrackets :: Parser a -> Parser a
+angleBrackets = between (lexeme $ char '<') (lexeme $ char '>')
 
 infixr 1 *<|>
 a *<|> b = try a <|> b
@@ -29,31 +57,14 @@ a *<|> b = try a <|> b
 infixr 2 ?:
 l ?: p = p <?> l
 
-stringGS (' ':xs) = do
-    x'  <- genSpace
-    xs' <- stringGS xs
-    return (x' ++ xs')
-stringGS (x:xs) = do
-    x'  <- char x
-    xs' <- stringGS xs
-    return (x' : xs')
-stringGS "" = return ""
-
-padString s = do
-    _ <- genSpace
-    s' <- string s
-    _ <- genSpace
-    return s'
-
 tryMany = (foldl1 (<|>)) . (map try)
 
-variableSymb = many1 (noneOf " ,|[]{}()+-*&^%#@!~`'\"\\/;:.,<>?=") <?> "variable"
+variableSymb = lexeme (many1 (noneOf " ,|[]{}()+-*&^%#@!~`'\"\\/;:.,<>?=") <?> "variable")
 
-
-patternMatcher :: GenParser Char st Pattern
+patternMatcher :: Parser Pattern
 patternMatcher =
-    (do 
-        _ <- char '_'
+    (do
+        _ <- lexeme (char '_')
         return Wild
     ) <|> {-( do
         a <- literal
@@ -61,15 +72,5 @@ patternMatcher =
             if obj == (a undefined)
             then Just (Map.empty)
             else Nothing
-    ) <|> -} ( do
-        symb <- variableSymb
-        return $ Name symb
-    ) <|> ( do
-        _ <- char '['
-        _ <- genSpace
-        components <- patternMatcher `sepBy` (try $ genSpace >> char ',' >> genSpace)
-        _ <- genSpace
-        _ <- char ']'
-        return $ ListP components
-    )
-
+    ) <|> -} Name <$> variableSymb
+    <|> ListP <$> (brackets (patternMatcher `sepBy` (try $ lexeme (char ','))))

@@ -146,7 +146,7 @@ defaultPolymorphicFunctions =
         sum = OFunc $ \x -> case x of
             (OList (x:xs)) -> foldl add x xs
             (OList [])     -> ONum 0
-            a              -> OError ["Product takes a list"]
+            a              -> OError ["sum takes a list"]
 
         add (ONum a) (ONum b) = ONum (a+b)
         add (OList a) (OList b) = OList $ zipWith add a b

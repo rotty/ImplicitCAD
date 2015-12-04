@@ -1,8 +1,3 @@
-{-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ < 710
-{-# LANGUAGE OverlappingInstances #-}
-#endif
-
 {-# LANGUAGE ViewPatterns, RankNTypes, ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances #-}
 
 module Graphics.Implicit.ExtOpenScad.Util.OVal where
@@ -36,7 +31,7 @@ instance OTypeMirror Bool where
     fromOObj _ = Nothing
     toOObj b = OBool b
 
-instance {-# Overlapping #-} OTypeMirror String where
+instance OTypeMirror String where
     fromOObj (OString str) = Just str
     fromOObj _ = Nothing
     toOObj str = OString str
@@ -46,7 +41,7 @@ instance forall a. (OTypeMirror a) => OTypeMirror (Maybe a) where
     toOObj (Just a) = toOObj a
     toOObj Nothing  = OUndefined
 
-instance {-# Overlappable #-} forall a. (OTypeMirror a) => OTypeMirror [a] where
+instance forall a. (OTypeMirror a) => OTypeMirror [a] where
     fromOObj (OList list) = Monad.sequence . map fromOObj $ list
     fromOObj _ = Nothing
     toOObj list = OList $ map toOObj list

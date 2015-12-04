@@ -143,15 +143,16 @@ main = do
           )
     writeIORef xmlErrorOn (xmlError args)
 
-    putStrLn $ "Loading File."
-    content <- readFile (inputFile args)
+    let input = (inputFile args)
 
-    let format = 
+    putStrLn $ "Loading file '" ++ input ++ "'."
+    content <- readFile input
+
+    let format =
             case () of
                 _ | Just fmt <- outputFormat args -> Just $ fmt
                 _ | Just file <- outputFile args  -> Just $ guessOutputFormat file
                 _                                 -> Nothing
-    putStrLn $ "Processing File."
 
     case runOpenscad content of
         Left err -> putStrLn $ show $ err
@@ -167,7 +168,7 @@ main = do
                                 $ outputFile args-}
             case (obj2s, obj3s) of
                 ([], [obj]) -> do
-                    let output = fromMaybe 
+                    let output = fromMaybe
                                      (basename ++ "." ++ fromMaybe "stl" posDefExt)
                                      (outputFile args)
                     putStrLn $ "Rendering 3D object to " ++ output
@@ -176,7 +177,7 @@ main = do
                     putStrLn $ show obj
                     export3 format res output obj
                 ([obj], []) -> do
-                    let output = fromMaybe 
+                    let output = fromMaybe
                                      (basename ++ "." ++ fromMaybe "stl" posDefExt)
                                      (outputFile args)
                     putStrLn $ "Rendering 2D object to " ++ output
@@ -185,4 +186,3 @@ main = do
                     export2 format res output obj
                 ([], []) -> putStrLn "No objects to render"
                 _        -> putStrLn "Multiple objects, what do you want to render?"
-

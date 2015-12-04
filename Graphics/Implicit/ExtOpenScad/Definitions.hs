@@ -67,6 +67,9 @@ instance Show OVal where
 type VarLookup = Map String OVal
 type FStack = [OVal]
 
+-- Note that the extra wrapping in a ListE is probably due to the way
+-- short-circuiting operators (e.g., the ternary operator) are
+-- implemented.
 collector :: Symbol -> [Expr] -> Expr
 collector _ [x] = x
 collector s  l  = Var s :$ [ListE l]
